@@ -318,7 +318,7 @@ function card(l){const fv=S.fav.includes(l.id),cp=S.cmp.includes(l.id);
  <div class="lc-m"><span title="Distance à l’université">${ic('cap')} ${l.u} km · université</span><span title="Trajet vers le travail">${ic('brief')} ${wt(l)==null?'<u data-a="tab" data-v="prof" style="cursor:pointer">Définir mon travail</u>':wt(l)+' min · travail'}</span></div>
  <div class="lc-t">${l.f?'<span class="tag">Meublé</span>':''}${l.rm?'<span class="tag">Visite à distance</span>':''}${l.ac?'<span class="tag">Accessible</span>':''}</div>
  <div class="lc-a"><button class="btn" data-a="detail" data-v="${l.id}">Voir le détail</button><button class="btn g" data-a="cmp" data-v="${l.id}" aria-pressed="${cp}">${cp?'Ajouté':'Comparer'}</button></div></div></article>`}
-function resHTML(){const r=filtered();return `<p class="mut"><b>${r.length}</b> logement${r.length>1?'s':''} · ${S.fav.length} favori${S.fav.length>1?'s':''}</p>`+(r.length?`<div class="grid">${r.map(card).join('')}</div>`:`<div class="card empty">Aucun logement ne correspond. Augmentez le budget ou retirez un filtre.<br><br><button class="btn" data-a="reset">Réinitialiser les filtres</button></div>`)}
+function resHTML(){const r=filtered();return widenBanner()+`<p class="mut"><b>${r.length}</b> logement${r.length>1?'s':''} · ${S.fav.length} favori${S.fav.length>1?'s':''}</p>`+(r.length?`<div class="grid">${r.map(card).join('')}</div>`:emptyHTML())}
 function V_search(){const f=S.fl,chip=(k,n)=>`<button class="chip" data-a="chip" data-v="${k}" aria-pressed="${!!f[k]}">${n}</button>`;
  return `<div class="lay"><aside class="card side"><h3>Filtres</h3>
  <label>Budget loyer max : <output id="o1">${f.bud} TND</output><input type="range" min="300" max="1200" step="10" value="${f.bud}" data-f="bud"></label>
@@ -355,7 +355,7 @@ function V_plan(){const e=S.est,t=e.r+e.c+e.t+e.e,sl=(k,n,mx)=>`<label>${n} : <o
  <section class="card" style="display:grid;gap:10px"><h3>Alertes nouvelles annonces</h3>
  <label>Quartier<select id="aq">${Object.keys(Q).map(q=>`<option>${q}</option>`).join('')}</select></label><label>Budget max (TND)<input type="number" id="ab" value="500" min="200" max="1500"></label>
  <button class="btn" data-a="alert">Activer l’alerte</button>
- ${S.al.map((a,i)=>`<div class="row" style="justify-content:space-between">${ic('bell')} ${a.q} · ≤ ${a.b} TND<button class="btn g sm" data-a="delal" data-v="${i}">Retirer</button></div>`).join('')}
+ ${S.al.map((a,i)=>`<div class="row" style="justify-content:space-between">${ic('bell')} ${a.q||'Tous quartiers'} · ≤ ${a.b} TND<button class="btn g sm" data-a="delal" data-v="${i}">Retirer</button></div>`).join('')}
  ${S.al.length?`<button class="btn g" data-a="simal">Simuler une nouvelle annonce</button>`:''}</section></div>`}
 function V_msgs(){const o=S.u.r==='o',ks=Object.keys(S.msgs).filter(k=>{const[id,e]=k.split('|');return o?own(byId(id))===S.u.e:e===S.u.e});
  if(!ks.length)return `<div class="card empty">${o?'Aucun message pour vos annonces.':'Aucune conversation. Ouvrez un logement et choisissez « Écrire au propriétaire ».<br><br><button class="btn" data-a="tab" data-v="search">Aller à la recherche</button>'}</div>`;
@@ -415,7 +415,7 @@ const act={
 theme(){const r=document.documentElement,d=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);r.dataset.theme=d?'light':'dark'},
 tab:setTab,close(){$('#dlg').close()},
 chip(k){S.fl[k]=S.fl[k]?0:1;render()},
-reset(){S.fl={...DEF};render()},
+reset(){S.fl={...DEF};S.wfrom=null;render()},
 fav(id){id=+id;S.fav=S.fav.includes(id)?S.fav.filter(x=>x!==id):[...S.fav,id];toast(S.fav.includes(id)?'Ajouté aux favoris':'Retiré des favoris');$('#dlg').open?detail(id):render()},
 cmp(id){id=+id;if(S.cmp.includes(id))S.cmp=S.cmp.filter(x=>x!==id);else if(S.cmp.length>=3)return toast('Maximum 3 logements à comparer');else{S.cmp.push(id);toast('Ajouté au comparateur ('+S.cmp.length+'/3)')}render()},
 detail(id){detail(+id)},
@@ -426,7 +426,7 @@ qfilter(q){S.fl={...S.fl,q};S.tab='search';render();window.scrollTo({top:0,behav
 usebud(){S.fl.bud=Math.max(300,S.est.r);S.tab='search';render();toast('Budget appliqué : '+S.est.r+' TND')},
 alert(){S.al.push({q:$('#aq').value,b:+$('#ab').value||500});toast('Alerte activée');render();mark('L12')},
 delal(i){S.al.splice(+i,1);render()},
-simal(){const a=S.al[0],m=LV().filter(l=>l.q===a.q&&l.r<=a.b)[0];toast(m?'Nouvelle annonce : '+m.t+', '+m.q+', '+m.r+' TND':'Pas de nouvelle annonce pour '+a.q+' ≤ '+a.b+' TND')},
+simal(){const a=S.al[0],m=LV().filter(l=>(!a.q||l.q===a.q)&&l.r<=a.b)[0];toast(m?'Nouvelle annonce : '+m.t+', '+m.q+', '+m.r+' TND':'Pas de nouvelle annonce pour '+(a.q||'tous quartiers')+' ≤ '+a.b+' TND')},
 msg(id){const k=id+'|'+S.u.e;S.msgs[k]=S.msgs[k]||[{t:"Bonjour, le logement est-il toujours disponible ?",by:'t'}];$('#dlg').close();setTab('msgs')},
 send(k){const i=document.querySelector(`[data-ki="${k}"]`),t=i.value.trim();if(!t)return;S.msgs[k].push({t,by:S.u.r});render()},
 sign(id){id=+id;if(!mine().some(v=>v.id===id&&v.ok))return toast('Réservez et faites confirmer une visite avant de signer');const l=byId(id);S.lease={id,by:S.u.e};S.pays=[];S.st[id]='Loué';S.ten.v='R1';$('#dlg').close();toast('Bail signé : '+l.t);setTab('pay')},
@@ -456,7 +456,7 @@ newl(){const t=$('#nt').value.trim(),r=+$('#nr').value;if(!t||!r)return toast('R
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||b.tagName==='INPUT')return;act[b.dataset.a]&&act[b.dataset.a](b.dataset.v)});
 document.addEventListener('change',e=>{const t=e.target;if(t.dataset.a==='rem')act.rem();if(t.dataset.c){S.chk[t.dataset.c]=t.checked;render()}else if(t.dataset.f&&t.tagName==='SELECT'){S.fl[t.dataset.f]=t.value;updRes()}});
-document.addEventListener('input',e=>{const t=e.target;if(t.dataset.f&&t.type==='range'){S.fl[t.dataset.f]=+t.value;t.previousSibling;t.closest('label').querySelector('output').textContent=t.value+(t.dataset.f==='bud'?' TND':' min');updRes()}
+document.addEventListener('input',e=>{const t=e.target;if(t.dataset.f&&t.type==='range'){S.fl[t.dataset.f]=+t.value;if(t.dataset.f==='bud')S.wfrom=null;t.previousSibling;t.closest('label').querySelector('output').textContent=t.value+(t.dataset.f==='bud'?' TND':' min');updRes()}
  if(t.dataset.e){S.est[t.dataset.e]=+t.value;t.closest('label').querySelector('output').textContent=t.value+' TND';const e=S.est,T=e.r+e.c+e.t+e.e||1;$('#tot').innerHTML=T+' <small>TND / mois</small>';[...document.querySelectorAll('#bar span')].forEach((sp,i)=>sp.style.width=[e.r,e.c,e.t,e.e][i]/T*100+'%')}});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.dataset.enter)act.send(e.target.dataset.enter);if(['apw','aemail','aname'].includes(e.target.id))act.login()});
 /* ===== Mon espace + formulaire propriétaire ===== */
@@ -575,6 +575,17 @@ avnosave(id){if(S.u.r!=='a')return;const m=$('#mt').value;if(!m)return setErr('m
  S.notes.push({id:NID++,to:own(l),t:`Votre annonce « ${l.t} » a été refusée et supprimée par l’équipe de validation. Motif : ${m}${d?' ('+d+')':''}.`});
  L.splice(L.indexOf(l),1);delete S.st[id];delete S.vc[id];S.visits=S.visits.filter(v=>v.id!=id);S.fav=S.fav.filter(x=>x!=id);S.cmp=S.cmp.filter(x=>x!=id);S.vs.no++;$('#dlg').close();render();toast('Annonce supprimée')}});
 document.addEventListener('change',e=>{const d=e.target.dataset||{};if(d.vc){const[id,k]=d.vc.split('|');(S.vc[id]=S.vc[id]||{})[k]=e.target.checked?1:0;render()}});
+
+/* ===== Aucun résultat : élargir en un clic ===== */
+function cntAt(b){const o=S.fl.bud;S.fl.bud=b;const n=filtered().length;S.fl.bud=o;return n}
+const hasAl=b=>S.al.some(a=>a.b===b&&(a.q||'')===(S.fl.q||''));
+function emptyHTML(){const b=S.fl.bud,nb=Math.min(1200,b+50),n=nb>b?cntAt(nb):0;
+ return `<div class="card empty" style="display:grid;gap:12px;justify-items:center"><h3>Aucun logement à ce budget</h3><p style="margin:0;max-width:46ch">${n?`Aucun logement à ${b} TND maximum. En élargissant à <b>${nb} TND</b>, <b>${n}</b> logement${n>1?'s apparaissent':' apparaît'}.`:`Aucun logement à ${b} TND maximum, même en élargissant de 50 TND. Essayez de modifier les filtres.`}</p><div class="row" style="justify-content:center">${n?'<button class="btn" data-a="widen">Élargir de +50 TND</button>':''}<button class="btn g" data-a="editf">Modifier les filtres</button></div>${hasAl(b)?`<span class="tag ok">${ic('bell')} Alerte active (≤ ${b} TND)</span>`:`<button class="btn g sm" data-a="alertbud" data-v="${b}">${ic('bell')} M’alerter si une annonce ≤ ${b} TND est publiée</button>`}</div>`}
+function widenBanner(){const f=S.wfrom;if(!f||S.fl.bud<=f)return '';return `<div class="nok" role="status" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>Budget élargi à <b>${S.fl.bud} TND</b> (départ : ${f} TND).</span>${hasAl(f)?`<span class="tag ok">Alerte active (≤ ${f} TND)</span>`:`<button class="btn sm" data-a="alertbud" data-v="${f}">${ic('bell')} Alerte sur ${f} TND</button>`}</div>`}
+Object.assign(act,{
+widen(){S.wfrom=S.fl.bud;S.fl.bud=Math.min(1200,S.fl.bud+50);render();toast('Budget élargi à '+S.fl.bud+' TND')},
+editf(){const el=document.querySelector('aside [data-f="q"]');if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus()}toast('Modifiez un filtre pour relancer la recherche')},
+alertbud(b){b=+b;if(!hasAl(b))S.al.push({q:S.fl.q,b});render();toast('Alerte activée : ≤ '+b+' TND');mark('L12')}});
 
 renderAuth();
 </script>
